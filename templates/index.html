@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PDF to Word Converter</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            background-color: #f4f7f6;
+            color: #333;
+        }
+        .container {
+            text-align: center;
+            background: white;
+            padding: 40px;
+            border-radius: 10px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            width: 90%;
+            max-width: 500px;
+        }
+        h1 {
+            margin-bottom: 20px;
+        }
+        form {
+            margin-top: 20px;
+        }
+        input[type="file"] {
+            border: 1px solid #ddd;
+            padding: 10px;
+            border-radius: 5px;
+            width: calc(100% - 24px); /* Adjust width to fit padding and border */
+        }
+        button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 5px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+            margin-top: 10px;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        button:disabled {
+            background-color: #5a9ed8;
+            cursor: not-allowed;
+        }
+        .status-message {
+            display: none; /* Hidden by default */
+            margin-top: 20px;
+            font-size: 18px;
+            color: #555;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>PDF to Word Converter 📄➡️📝</h1>
+        <p>Upload a PDF file and get a Word document.</p>
+        
+        <form id="upload-form">
+            <input type="file" id="pdf-file-input" name="pdf_file" accept=".pdf" required>
+            <button type="submit">Convert to Word</button>
+        </form>
+
+        <div id="status" class="status-message">
+            Please wait...
+        </div>
+    </div>
+
+    <script>
+        // Select elements from the DOM
+        const form = document.getElementById('upload-form');
+        const fileInput = document.getElementById('pdf-file-input');
+        const statusDiv = document.getElementById('status');
+        const submitButton = form.querySelector('button');
+
+        // Add an event listener for the form submission
+        form.addEventListener('submit', async (event) => {
+            // Prevent the default form submission (page reload)
+            event.preventDefault();
+
+            // Show status message and disable the button
+            statusDiv.innerText = 'Uploading and converting... Please wait.';
+            statusDiv.style.display = 'block';
+            submitButton.disabled = true;
+            submitButton.innerText = 'Processing...';
+
+            // Create a FormData object to send the file
+            const formData = new FormData();
+            formData.append('pdf_file', fileInput.files[0]);
+
+            try {
+                // Send the file to the server using fetch
+                const response = await fetch('/upload', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                // Check if the server responded with an error
+                if (!response.ok) {
+                    throw new Error('Server responded with an error!');
+                }
+
+                // Get the file data as a Blob (Binary Large Object)
+                const blob = await response.blob();
+
+                // --- This is the magic part for triggering the download ---
+                
+                // 1. Create a temporary URL for the blob data
+                const url = window.URL.createObjectURL(blob);
+
+                // 2. Create a temporary invisible link element
+                const a = document.createElement('a');
+                a.style.display = 'none';
+                a.href = url;
+
+                // 3. Set the download filename
+                const originalFilename = fileInput.files[0].name;
+                a.download = originalFilename.replace(/\.pdf$/i, '.docx');
+
+                // 4. Append the link to the body and programmatically click it
+                document.body.appendChild(a);
+                a.click();
+
+                // 5. Clean up by removing the link and revoking the URL
+                window.URL.revokeObjectURL(url);
+                document.body.removeChild(a);
+
+            } catch (error) {
+                // If something went wrong, show an error message
+                statusDiv.innerText = 'An error occurred. Please try again.';
+                console.error('Error:', error);
+            } finally {
+                // No matter what happens, re-enable the form
+                statusDiv.style.display = 'none';
+                submitButton.disabled = false;
+                submitButton.innerText = 'Convert to Word';
+            }
+        });
+    </script>
+
+</body>
+</html>
